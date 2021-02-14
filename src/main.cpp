@@ -4,10 +4,10 @@
 
 int main(int argc, char *argv[])
 {
-	char  fileName[15];
+	char  fileName[256];
 	FILE* pFile;
 
-	if (argc >= 2)
+	if (argc == 2)
 	{
 		strcpy(fileName, argv[1]);
 	}
@@ -31,5 +31,5 @@ int main(int argc, char *argv[])
 
 	//disassembler(instr_fetch, data_mem, break_pos, count);
 	//simulator(instr_fetch, data_mem, break_pos, count);
-
+	return 0;
 }
