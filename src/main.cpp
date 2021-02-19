@@ -1,35 +1,40 @@
-#include <stdio.h>
 #include <iostream>
+#include <fstream>
+#include <string>
 #include "input_handler.h"
+#include "mips_arch.h"
+#include "disassembler.h"
 
 int main(int argc, char *argv[])
 {
-	char  fileName[256];
-	FILE* pFile;
+	std::string inputFileName;
 
 	if (argc == 2)
 	{
-		strcpy(fileName, argv[1]);
+		// assuming the length of filename/path will not exceed 256 characters
+		inputFileName = argv[1];
 	}
 	else
 	{
-		std::cout<<"Usage : MIPSsim <input fileName>";
-		exit(1);
+		std::cout<<"Usage : MIPSsim <input file name>";
+		exit(-1);
 	}
 
-	pFile = fopen(fileName, "r");
+	std::ifstream file(inputFileName);
 
-	if (pFile == NULL)
+	if (!file.is_open())
 	{
 		std::cout<<"File not found";
 		return -1;
 	}
 
+	MipsProcessor processor;
 	InputHandler inputParser;
+	Disassembler dis;
 
-	inputParser.loadMipsCodeFromFile(pFile);
+	inputParser.LoadMipsCodeFromFile(&processor, &file);
 
-	//disassembler(instr_fetch, data_mem, break_pos, count);
+	dis.GenerateDisassembly(&processor, inputParser.m_breakPosition, inputParser.m_instructionCount);
 	//simulator(instr_fetch, data_mem, break_pos, count);
 	return 0;
 }
