@@ -17,17 +17,18 @@ void DetermineRegister(long unsigned int instruction, int immFlag, struct Regist
 {
 	if (immFlag == 0)
 	{
-		reg->rd = (instruction & RD_BITMASK) >> 11;
+		reg->rd = (instruction & REG_RD_BITMASK) >> 11;
 	}
 	else if (immFlag == 1)
 	{
-		reg->imm = (instruction & IMM_BITMASK);
+		reg->imm = (instruction & REG_IMM_BITMASK);
 		//printf("%d\n", reg->imm);
 	}
 	else if (immFlag == 2)
 	{
-		reg->imm_addr = (instruction & IMM_BITMASK);
+		reg->imm_addr = (instruction & REG_IMM_BITMASK);
 	}
-	reg->rs = (instruction & RS_BITMASK) >> 21;
-	reg->rt = (instruction & RT_BITMASK) >> 16;
+
+	reg->rs = (instruction & REG_RS_BITMASK) >> 21;
+	reg->rt = (instruction & REG_RT_BITMASK) >> 16;
 }

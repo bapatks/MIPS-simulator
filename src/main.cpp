@@ -30,11 +30,11 @@ int main(int argc, char *argv[])
 
 	MipsProcessor processor;
 	InputHandler inputParser;
-	Disassembler dis;
 
 	inputParser.LoadMipsCodeFromFile(&processor, &file);
 
-	dis.GenerateDisassembly(&processor, inputParser.m_breakPosition, inputParser.m_instructionCount);
+	Disassembler dis(&inputParser);
+	dis.GenerateDisassembly(&processor);
 	//simulator(instr_fetch, data_mem, break_pos, count);
 	return 0;
 }

@@ -1,30 +1,41 @@
 #include <bitset>
 #include "disassembler.h"
 
-Disassembler::Disassembler()
+Disassembler::Disassembler(InputHandler* pInputParser)
 	:
-	reg{0}
+	reg{0},
+	m_pInputParser(pInputParser)
 {
-	/*pDisasmFile->open("E:\\disasm.txt", ios::write);
-	if (!(pDisasmFile->is_open()))
+	// Just create the file and close it
+	m_disasmFile.open(DISASSEMBLY_FILE);
+	if (!(m_disasmFile.is_open()))
 	{
 		std::cout << "Cannot write to file";
-	}*/
+	}
+	else
+	{
+		m_disasmFile.close();
+	}
 }
 
 void Disassembler::GenerateDisassembly(
-	MipsProcessor* processor,
-	int            breakPosition,
-	int            instructionCount)
+	MipsProcessor* processor)
 {
 	unsigned long int* pInstructionMemory = (unsigned long int*)processor->GetInstructionMemoryPtr();
 	int* pDataMemory = (int*)processor->GetDataMemoryPtr();
 
+	int breakPosition    = m_pInputParser->m_breakPosition;
+	int instructionCount = m_pInputParser->m_instructionCount;
+
 	int data;
 	unsigned long int instruction;
-	unsigned int type, opcode;
+	unsigned int type, opcode, sourceAddress, targetAddress;
+
+	RegisterTypes reg{ 0 };
 
 	unsigned short int PC = PC_START_ADDRESS;
+
+	m_disasmFile.open(DISASSEMBLY_FILE);
 
 	for (int i = 0; i < (breakPosition + 1); i++)
 	{
@@ -39,171 +50,155 @@ void Disassembler::GenerateDisassembly(
 		// Check for type 1 instructions
 		if (type == 0x01)
 		{
-//			switch (opcode)
-//			{
-//			// Jump instruction
-//			case 0x00:
-//				//printf("%s\t%d\t%d\n", instr,PC,opcode);
-//				targ_addr = (instruction & 0b00000011111111111111111111111111) << 2;
-//				fprintf(disasmfp, "%s\t%d\tJ #%d \n", instr, PC, targ_addr);
-//				break;
-//
-//			// JR instruction
-//			case 0x01:
-//				determine_register(instruction, 0, &RG);
-//				fprintf(disasmfp, "%s\t%d\tJR R%d\n", instr, PC, RG.rs);
-//				break;
-//
-//			case 0x02:
-//				determine_register(instruction, 2, &RG);
-//				targ_addr = (RG.imm_addr * 4); //same as shifting a binary number left by 2
-//				fprintf(disasmfp, "%s\t%d\tBEQ R%d, R%d, #%d\n", instr, PC, RG.rs, RG.rt, targ_addr);
-//				break;
-//
-//			case 0x03:
-//				determine_register(instruction, 2, &RG);
-//				targ_addr = RG.imm_addr * 4; //same as shifting a binary number left by 2
-//				fprintf(disasmfp, "%s\t%d\tBLTZ R%d, #%d\n", instr, PC, RG.rs, targ_addr);
-//				break;
-//
-//			case 0x04:
-//				determine_register(instruction, 2, &RG);
-//				targ_addr = RG.imm_addr * 4; //same as shifting a binary number left by 2
-//				fprintf(disasmfp, "%s\t%d\tBGTZ R%d, #%d\n", instr, PC, RG.rs, targ_addr);
-//				break;
-//
-//			case 0x05:
-//				fprintf(disasmfp, "%s\t%d\tBREAK\n", instr, PC);
-//				break;
-//
-//			case 0x06:
-//				determine_register(instruction, 2, &RG);
-//				// here, rs => base and imm_addr => offset
-//				fprintf(disasmfp, "%s\t%d\tSW R%d, %d(R%d)\n", instr, PC, RG.rt, RG.imm_addr, RG.rs);
-//				break;
-//
-//			case 0x07:
-//				determine_register(instruction, 2, &RG);
-//				// here, rs => base and imm_addr => offset
-//				fprintf(disasmfp, "%s\t%d\tLW R%d, %d(R%d)\n", instr, PC, RG.rt, RG.imm_addr, RG.rs);
-//				break;
-//
-//			case 0x08:
-//				determine_register(instruction, 0, &RG);
-//				sa = (instruction & 0b00000000000000000000011111000000) >> 6;
-//				fprintf(disasmfp, "%s\t%d\tSLL R%d, R%d, #%d\n", instr, PC, RG.rd, RG.rt, sa);
-//				break;
-//
-//			case 0x09:
-//				determine_register(instruction, 0, &RG);
-//				sa = (instruction & 0b00000000000000000000011111000000) >> 6;
-//				fprintf(disasmfp, "%s\t%d\tSRL R%d, R%d, #%d\n", instr, PC, RG.rd, RG.rt, sa);
-//				break;
-//
-//			case 0x0A:
-//				determine_register(instruction, 0, &RG);
-//				sa = (instruction & 0b00000000000000000000011111000000) >> 6;
-//				fprintf(disasmfp, "%s\t%d\tSRA R%d, R%d, #%d\n", instr, PC, RG.rd, RG.rt, sa);
-//				break;
-//
-//			case 0x0B:
-//				fprintf(disasmfp, "%s\t%d\tNOP\n", instr, PC);
-//				break;
-//
-//			default:
-//				std::cout << "Unknown instruction read. Was a valid input file provided?";
-//#if DEBUG_LOG
-//				std::cout << "Invalid instruction found : " << instructionString;
-//#endif
-//				break;
-//			}
+			switch (opcode)
+			{
+			// Jump instruction
+			case 0x00:
+				targetAddress = (instruction & ~(CHECK_INSTR_BITMASK)) << 2;
+				m_disasmFile << instructionString << "\t" << PC << "\tJ #" << targetAddress << "\n";
+				break;
+
+			// JR instruction
+			case 0x01:
+				DetermineRegister(instruction, 0, &reg);
+				m_disasmFile << instructionString << "\t" << PC << "\tJR R" << reg.rs << "\n";
+				break;
+
+			case 0x02:
+				DetermineRegister(instruction, 2, &reg);
+				targetAddress = reg.imm_addr << 2; // same as multiplying by 4
+				m_disasmFile << instructionString << "\t" << PC << "\tBEQ R" << reg.rs << ", R" << reg.rt << ", #" << targetAddress << "\n";
+				break;
+
+			case 0x03:
+				DetermineRegister(instruction, 2, &reg);
+				targetAddress = reg.imm_addr << 2; // same as multiplying by 4
+				m_disasmFile << instructionString << "\t" << PC << "\tBLTZ R" << reg.rs << ", #" << targetAddress << "\n";
+				break;
+
+			case 0x04:
+				DetermineRegister(instruction, 2, &reg);
+				targetAddress = reg.imm_addr << 2; // same as multiplying by 4
+				m_disasmFile << instructionString<<"\t" << PC << "\tBGTZ R" << reg.rs << ", #" << targetAddress << "\n";
+				break;
+
+			case 0x05:
+				m_disasmFile << instructionString << "\t" << PC << "\tBREAK\n";
+				break;
+
+			case 0x06:
+				DetermineRegister(instruction, 2, &reg);
+				// here, rs => base and imm_addr => offset
+				m_disasmFile << instructionString << "\t" << PC << "\tSW R" << reg.rt << ", " << reg.imm_addr << "(R" << reg.rs << ")\n";
+				break;
+
+			case 0x07:
+				DetermineRegister(instruction, 2, &reg);
+				// here, rs => base and imm_addr => offset
+				m_disasmFile << instructionString << "\t" << PC << "\tLW R" << reg.rt << ", " << reg.imm_addr << "(R" << reg.rs << ")\n";
+				break;
+
+			case 0x08:
+				DetermineRegister(instruction, 0, &reg);
+				sourceAddress = (instruction & 0b00000000000000000000011111000000) >> 6;
+				m_disasmFile << instructionString << "\t" << PC << "\tSLL R" << reg.rd << ", R" << reg.rt << ", #" << sourceAddress << "\n";
+				break;
+
+			case 0x09:
+				DetermineRegister(instruction, 0, &reg);
+				sourceAddress = (instruction & 0b00000000000000000000011111000000) >> 6;
+				m_disasmFile << instructionString << "\t" << PC << "\tSRL R" << reg.rd << ", R" << reg.rt << ", #" << sourceAddress << "\n";
+				break;
+
+			case 0x0A:
+				DetermineRegister(instruction, 0, &reg);
+				sourceAddress = (instruction & 0b00000000000000000000011111000000) >> 6;
+				m_disasmFile << instructionString << "\t" << PC << "\tSRA R" << reg.rd << ", R" << reg.rt << ", #" << sourceAddress << "\n";
+				break;
+
+			case 0x0B:
+				m_disasmFile << instructionString << "\t" << PC << "\tNOP\n";
+				break;
+
+			default:
+				std::cout << "Unknown instruction read. Was a valid input file provided?";
+#if DEBUG_LOG
+				std::cout << "Invalid instruction found : " << instructionString;
+#endif
+				break;
+			}
 		}
 		// Check for type 2 instructions
 		else if (type == 0x03)
 		{
+			switch (opcode)
+			{
+			case 0x00:
+				DetermineRegister(instruction, 0, &reg);
+				m_disasmFile << instructionString << "\t" << PC << "\tADD R" << reg.rd << ", R" << reg.rs << ", R" << reg.rt << "\n";
+				break;
+
+			case 0x01:
+				DetermineRegister(instruction, 0, &reg);
+				m_disasmFile << instructionString << "\t" << PC << "\tSUB R" << reg.rd << ", R" << reg.rs << ", R" << reg.rt << "\n";
+				break;
+
+			case 0x02:
+				DetermineRegister(instruction, 0, &reg);
+				m_disasmFile << instructionString << "\t" << PC << "\tMUL R" << reg.rd << ", R" << reg.rs << ", R" << reg.rt << "\n";
+				break;
+
+			case 0x03:
+				DetermineRegister(instruction, 0, &reg);
+				m_disasmFile << instructionString << "\t" << PC << "\tAND R" << reg.rd << ", R" << reg.rs << ", R" << reg.rt << "\n";
+				break;
+
+			case 0x04:
+				DetermineRegister(instruction, 0, &reg);
+				m_disasmFile << instructionString << "\t" << PC << "\tOR R" << reg.rd << ", R" << reg.rs << ", R" << reg.rt << "\n";
+				break;
+
+			case 0x05:
+				DetermineRegister(instruction, 0, &reg);
+				m_disasmFile << instructionString << "\t" << PC << "\tXOR R" << reg.rd << ", R" << reg.rs << ", R" << reg.rt << "\n";
+				break;
+
+			case 0x06:
+				DetermineRegister(instruction, 0, &reg);
+				m_disasmFile << instructionString << "\t" << PC << "\tNOR R" << reg.rd << ", R" << reg.rs << ", R" << reg.rt << "\n";
+				break;
+
+			case 0x07:
+				DetermineRegister(instruction, 0, &reg);
+				m_disasmFile << instructionString << "\t" << PC << "\tSLT R" << reg.rd << ", R" << reg.rs << ", R" << reg.rt << "\n";
+				break;
+
+			case 0x08:
+				DetermineRegister(instruction, 1, &reg);
+				m_disasmFile << instructionString << "\t" << PC << "\tADDI R" << reg.rt << ", R" << reg.rs << ", #" << reg.imm << "\n";
+				break;
+
+			case 0x09:
+				DetermineRegister(instruction, 1, &reg);
+				m_disasmFile << instructionString << "\t" << PC << "\tANDI R" << reg.rt << ", R" << reg.rs << ", #" << reg.imm << "\n";
+				break;
+
+			case 0x0A:
+				DetermineRegister(instruction, 1, &reg);
+				m_disasmFile << instructionString << "\t" << PC << "\tORI R" << reg.rt << ", R" << reg.rs << ", #" << reg.imm << "\n";
+				break;
+
+			case 0x0B:
+				DetermineRegister(instruction, 1, &reg);
+				m_disasmFile << instructionString << "\t" << PC << "\tXORI R" << reg.rt << ", R" << reg.rs << ", #" << reg.imm << "\n";
+				break;
+
+			default:
+				std::cout << "Unknown instruction read. Was a valid input file provided?";
 #if DEBUG_LOG
-			//printf("%s\t%d\t%d\n",instr,PC,opcode);
+				std::cout << "Invalid instruction found : " << instructionString;
 #endif
-//			switch (opcode)
-//			{
-//			case 0x00:
-//				//printf("%s\t%d\t%d\n", instr,PC,opcode);
-//				determine_register(instruction, 0, &RG);
-//				fprintf(disasmfp, "%s\t%d\tADD R%d, R%d, R%d \n", instr, PC, RG.rd, RG.rs, RG.rt);
-//				break;
-//
-//			case 0x01:
-//				//printf("%s\t%d\t%d\n", instr,PC,opcode);
-//				determine_register(instruction, 0, &RG);
-//				fprintf(disasmfp, "%s\t%d\tSUB R%d, R%d, R%d \n", instr, PC, RG.rd, RG.rs, RG.rt);
-//				break;
-//
-//			case 0x02:
-//				//printf("%s\t%d\t%d\n", instr,PC,opcode);
-//				determine_register(instruction, 0, &RG);
-//				fprintf(disasmfp, "%s\t%d\tMUL R%d, R%d, R%d \n", instr, PC, RG.rd, RG.rs, RG.rt);
-//				break;
-//
-//			case 0x03:
-//				//printf("%s\t%d\t%d\n", instr,PC,opcode);
-//				determine_register(instruction, 0, &RG);
-//				fprintf(disasmfp, "%s\t%d\tAND R%d, R%d, R%d \n", instr, PC, RG.rd, RG.rs, RG.rt);
-//				break;
-//
-//			case 0x04:
-//				//printf("%s\t%d\t%d\n", instr,PC,opcode);
-//				determine_register(instruction, 0, &RG);
-//				fprintf(disasmfp, "%s\t%d\tOR R%d, R%d, R%d \n", instr, PC, RG.rd, RG.rs, RG.rt);
-//				break;
-//
-//			case 0x05:
-//				//printf("%s\t%d\t%d\n", instr,PC,opcode);
-//				determine_register(instruction, 0, &RG);
-//				fprintf(disasmfp, "%s\t%d\tXOR R%d, R%d, R%d \n", instr, PC, RG.rd, RG.rs, RG.rt);
-//				break;
-//
-//			case 0x06:
-//				//printf("%s\t%d\t%d\n", instr,PC,opcode);
-//				determine_register(instruction, 0, &RG);
-//				fprintf(disasmfp, "%s\t%d\tNOR R%d, R%d, R%d \n", instr, PC, RG.rd, RG.rs, RG.rt);
-//				break;
-//
-//			case 0x07:
-//				//printf("%s\t%d\t%d\n", instr,PC,opcode);
-//				determine_register(instruction, 0, &RG);
-//				fprintf(disasmfp, "%s\t%d\tSLT R%d, R%d, R%d \n", instr, PC, RG.rd, RG.rs, RG.rt);
-//				break;
-//
-//			case 0x08:
-//				//printf("%s\t%d\t%d\n", instr,PC,opcode);
-//				determine_register(instruction, 1, &RG);
-//				fprintf(disasmfp, "%s\t%d\tADDI R%d, R%d, #%d \n", instr, PC, RG.rt, RG.rs, RG.imm);
-//				break;
-//
-//			case 0x09:
-//				//printf("%s\t%d\t%d\n", instr,PC,opcode);
-//				determine_register(instruction, 1, &RG);
-//				fprintf(disasmfp, "%s\t%d\tANDI R%d, R%d, #%d \n", instr, PC, RG.rt, RG.rs, RG.imm);
-//				break;
-//
-//			case 0x0A:
-//				//printf("%s\t%d\t%d\n", instr,PC,opcode);
-//				determine_register(instruction, 1, &RG);
-//				fprintf(disasmfp, "%s\t%d\tORI R%d, R%d, #%d \n", instr, PC, RG.rt, RG.rs, RG.imm);
-//				break;
-//
-//			case 0x0B:
-//				//printf("%s\t%d\t%d\n", instr,PC,opcode);
-//				determine_register(instruction, 1, &RG);
-//				fprintf(disasmfp, "%s\t%d\tXORI R%d, R%d, #%d \n", instr, PC, RG.rt, RG.rs, RG.imm);
-//				break;
-//
-//			default:
-//				std::cout << "Unknown instruction read. Was a valid input file provided?";
-//#if DEBUG_LOG
-//				std::cout << "Invalid instruction found : " << instructionString;
-//#endif
-//			}
+			}
 		}
 		PC = PC + 4;
 	}
@@ -215,9 +210,9 @@ void Disassembler::GenerateDisassembly(
 		// Convert the instruction word back into string to facilitate writing disassembly
 		std::string dataString = std::bitset<32>(data).to_string();
 
-		//fprintf(disasmfp, "%s\t%d\t%d\n", instr, PC, data_mem[j]);
+		m_disasmFile << dataString << "\t" << PC << "\t" << data << "\n";
 		PC = PC + 4;
 	}
 
-	pDisasmFile->close();
+	m_disasmFile.close();
 }

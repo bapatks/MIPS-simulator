@@ -1,17 +1,19 @@
 #pragma once
 #include <iostream>
 #include <fstream>
+#include "input_handler.h"
 #include "mips_arch.h"
 
-#define DISASSEMBLY_FILE "C:\\Users\\kaust\\Desktop\\disasm.txt"
+#define DISASSEMBLY_FILE "disasm.txt"
 
 class Disassembler
 {
 public:
-	Disassembler();
-	void GenerateDisassembly(MipsProcessor* processor, int breakPosition, int instructionCount);
+	Disassembler(InputHandler* pInputParser);
+	void GenerateDisassembly(MipsProcessor* processor);
 
 private:
 	RegisterTypes reg;
-	std::ofstream* pDisasmFile;
+	InputHandler* m_pInputParser;
+	std::ofstream m_disasmFile;
 };
