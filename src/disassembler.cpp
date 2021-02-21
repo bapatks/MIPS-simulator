@@ -1,4 +1,5 @@
 #include <bitset>
+#include <iostream>
 #include "disassembler.h"
 
 Disassembler::Disassembler(InputHandler* pInputParser)
@@ -24,6 +25,8 @@ void Disassembler::GenerateDisassembly(
 	unsigned long int* pInstructionMemory = (unsigned long int*)processor->GetInstructionMemoryPtr();
 	int* pDataMemory = (int*)processor->GetDataMemoryPtr();
 
+	unsigned short int PC = *((unsigned short int*)processor->GetProgramCounterPtr());
+
 	int breakPosition    = m_pInputParser->m_breakPosition;
 	int instructionCount = m_pInputParser->m_instructionCount;
 
@@ -32,8 +35,6 @@ void Disassembler::GenerateDisassembly(
 	unsigned int type, opcode, sourceAddress, targetAddress;
 
 	RegisterTypes reg{ 0 };
-
-	unsigned short int PC = PC_START_ADDRESS;
 
 	m_disasmFile.open(DISASSEMBLY_FILE);
 
@@ -198,6 +199,7 @@ void Disassembler::GenerateDisassembly(
 #if DEBUG_LOG
 				std::cout << "Invalid instruction found : " << instructionString;
 #endif
+				break;
 			}
 		}
 		PC = PC + 4;

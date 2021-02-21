@@ -1,5 +1,4 @@
 #pragma once
-#include <iostream>
 #include <fstream>
 #include "input_handler.h"
 #include "mips_arch.h"

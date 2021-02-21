@@ -4,6 +4,7 @@
 #include "input_handler.h"
 #include "mips_arch.h"
 #include "disassembler.h"
+#include "simulator.h"
 
 int main(int argc, char *argv[])
 {
@@ -35,6 +36,8 @@ int main(int argc, char *argv[])
 
 	Disassembler dis(&inputParser);
 	dis.GenerateDisassembly(&processor);
-	//simulator(instr_fetch, data_mem, break_pos, count);
+
+	Simulator sim(&inputParser);
+	sim.RunSimulation(&processor);
 	return 0;
 }

@@ -1,19 +1,54 @@
 #include "mips_arch.h"
 
+// =====================================================================================================================
+FetchStage::FetchStage()
+	:
+	m_t_trackDirtyRegisters{false}
+{
+
+}
+
+// =====================================================================================================================
+ControlUnit::ControlUnit()
+	:
+	breakFlag(false),
+	trackDirtyRegisters{false}
+{
+
+}
+
+// =====================================================================================================================
+IssueStage::IssueStage()
+	:
+	m_t_prissue{0}
+{
+
+}
+
+// =====================================================================================================================
+AluStage::AluStage()
+	:
+	m_t_pralu{ 0 }
+{
+
+}
+// =====================================================================================================================
 MipsProcessor::MipsProcessor()
 	:
-	m_registers{0},
-	m_programCounter(PC_START_ADDRESS)
+	m_registerFile{0},
+	m_programCounter(PC_START_ADDRESS),
+	m_buffers{0}
 {
 	for (int i = 0; i < 512; i++)
 	{
 		// Clear the instruction and data memory
-		m_memory.dataMemory[i] = 0;
-		m_memory.instructionMemory[i] = 0;
+		m_processorMemory.dataMemory[i] = 0;
+		m_processorMemory.instructionMemory[i] = 0;
 	}
 }
 
-void DetermineRegister(long unsigned int instruction, int immFlag, struct RegisterTypes* reg)
+// =====================================================================================================================
+void DetermineRegister(unsigned long int instruction, int immFlag, struct RegisterTypes* reg)
 {
 	if (immFlag == 0)
 	{
