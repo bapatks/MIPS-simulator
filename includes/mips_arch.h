@@ -83,6 +83,7 @@ class IssueStage
 {
 public:
 	IssueStage();
+	void SimulateStage();
 
 private:
 	unsigned long int m_prissue[4];   // pre issue buffer
@@ -138,6 +139,10 @@ public:
 	void Fetch() {
 		m_fetch.SimulateStage(m_processorMemory.instructionMemory, m_registerFile, &m_programCounter, &m_controlUnit);
 	};
+
+	void Issue() {
+		m_issue.SimulateStage();
+	}
 
 private:
 	int                m_registerFile[32];
