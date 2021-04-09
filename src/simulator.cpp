@@ -25,8 +25,14 @@ int Simulator::RunSimulation(
 
 	unsigned short int* PC = (unsigned short int*)processor->GetProgramCounterPtr();
 
-	int breakPosition = m_pInputParser->m_breakPosition;
+	int breakPosition    = m_pInputParser->m_breakPosition;
 	int instructionCount = m_pInputParser->m_instructionCount;
 
+	int dataStartAddress = (*PC) + (breakPosition * 4);
+
+	while ((*PC) >= PC_START_ADDRESS)
+	{
+		processor->Fetch();
+	}
 	return 0;
 }

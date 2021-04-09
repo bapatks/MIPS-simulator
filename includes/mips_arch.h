@@ -26,30 +26,37 @@ struct RegisterTypes
 	unsigned short int imm_addr; // stores 16 bit offset address
 };
 
-void DetermineRegister(unsigned long int instruction, int immFlag, struct RegisterTypes* reg);
+void DetermineRegister(unsigned long int instruction, int immFlag, RegisterTypes* pReg);
+int DetermineDestinationRegister(unsigned long int prissueInstruction, RegisterTypes* pReg);
 
 struct ProcessorBuffers
 {
-	unsigned long int pralu1[2];  //pre alu1 queue
-	unsigned long int pralu2[2];  //pre alu2 queue
-	unsigned long int premem;     //pre mem buffer
-	unsigned long int postalu2;   //post alu2 buffer
-	unsigned long int postmem;    //post mem buffer
-	unsigned long int dum;        //dummy buffer, needed?
+	unsigned long int t_prissue[4]; // temp pre issue buffer
+	unsigned long int t_pralu1[2];  // temp pre alu1 queue
+	unsigned long int t_pralu2[2];  // temp pre alu2 queue
+	unsigned long int t_premem;     //pre mem buffer
+	unsigned long int t_postalu2;   //post alu2 buffer
+	unsigned long int t_postmem;    //post mem buffer
+	unsigned long int dum;          //dummy buffer, needed?
 	int calc;
 	int mem_addr;
 	int mem_val;
 };
 
-struct ControlUnit
+class ControlUnit
 {
 public:
 	ControlUnit();
-	bool breakFlag; // used by fetch stage and simulator
-	bool trackDirtyRegisters[32]; // rstatus - Used by fetch, issue, mem stage
+	bool m_breakFlag; // used by fetch stage and simulator
+	bool m_trackDirtyRegisters[32]; // rstatus - Used by fetch, issue, mem stage
 
-	//TODO: consider renaming to haltExecution
-	unsigned long int wait_exec[2]; //used by fetch stage and simulator
+	//TODO: consider renaming to haltExec
+	unsigned long int m_haltExec[2]; //used by fetch stage and simulator
+
+	RegisterTypes m_reg;
+
+	// Intermediate buffers that are used to move data between pipeline stages
+	ProcessorBuffers m_tempBuffers;
 };
 
 // Each stage will read a permanent buffer and write to a temporary buffer
@@ -57,8 +64,16 @@ class FetchStage
 {
 public:
 	FetchStage();
+	void SimulateStage(
+		unsigned long int*  pInstructionMemory,
+		int*                pRegisterFile,
+		unsigned short int* pPC,
+		ControlUnit*        pControlUnit);
 
 private:
+	// These are used for checking if a particular register is free for use.
+	// TODO: change the names, what is "re"?
+	int m_re1, m_re2;
 	bool m_instructionFetchStall;
 	// array of temp values - temp_rstatus
 	bool m_t_trackDirtyRegisters[32];
@@ -71,7 +86,6 @@ public:
 
 private:
 	unsigned long int m_prissue[4];   // pre issue buffer
-	unsigned long int m_t_prissue[4]; // temp pre issue buffer
 };
 
 class AluStage
@@ -80,14 +94,19 @@ public:
 	AluStage();
 
 private:
-	unsigned long int pralu[2];     // pre alu queue or FIFO buffer
-	unsigned long int m_t_pralu[2]; // temp pre alu queue
+	unsigned long int pralu[2]; // pre alu queue or FIFO buffer
+	unsigned long int postalu; // post alu buffer
+
 };
 
-// Do we need this?
 class MemoryStage
 {
+public:
+	MemoryStage();
 
+private:
+	unsigned long int premem;     //pre mem buffer
+	unsigned long int postmem;    //post mem buffer
 };
 
 class WriteBackStage
@@ -116,14 +135,14 @@ public:
 		return &(m_programCounter);
 	}
 
+	void Fetch() {
+		m_fetch.SimulateStage(m_processorMemory.instructionMemory, m_registerFile, &m_programCounter, &m_controlUnit);
+	};
+
 private:
 	int                m_registerFile[32];
 	unsigned short int m_programCounter;
 	Memory             m_processorMemory;
-
-	// Intermediate buffers that are used to move data between pipeline stages
-	// Each stage should be exposed to only a subset of buffers relevant to it
-	ProcessorBuffers m_buffers;
 
 	// Pipeline stages
 	FetchStage     m_fetch;

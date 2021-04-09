@@ -1,7 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <string>
-#include "input_handler.h"
+#include "utils.h"
 #include "mips_arch.h"
 #include "disassembler.h"
 #include "simulator.h"

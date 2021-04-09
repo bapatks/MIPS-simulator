@@ -1,6 +1,6 @@
 #pragma once
 #include <fstream>
-#include "input_handler.h"
+#include "utils.h"
 #include "mips_arch.h"
 
 #define DISASSEMBLY_FILE "disasm.txt"
