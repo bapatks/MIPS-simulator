@@ -1,4 +1,5 @@
 #pragma once
+#include "utils.h"
 
 #define PC_START_ADDRESS 256
 
@@ -27,7 +28,7 @@ struct RegisterTypes
 };
 
 void DetermineRegister(unsigned long int instruction, int immFlag, RegisterTypes* pReg);
-int DetermineDestinationRegister(unsigned long int prissueInstruction, RegisterTypes* pReg);
+int  DetermineDestinationRegister(unsigned long int prissueInstruction, RegisterTypes* pReg);
 
 struct ProcessorBuffers
 {
@@ -50,7 +51,6 @@ public:
 	bool m_breakFlag; // used by fetch stage and simulator
 	bool m_trackDirtyRegisters[32]; // rstatus - Used by fetch, issue, mem stage
 
-	//TODO: consider renaming to haltExec
 	unsigned long int m_haltExec[2]; //used by fetch stage and simulator
 
 	RegisterTypes m_reg;
@@ -83,7 +83,8 @@ class IssueStage
 {
 public:
 	IssueStage();
-	void SimulateStage();
+	void SimulateStage(
+		ControlUnit* pControlUnit);
 
 private:
 	unsigned long int m_prissue[4];   // pre issue buffer
@@ -141,7 +142,7 @@ public:
 	};
 
 	void Issue() {
-		m_issue.SimulateStage();
+		m_issue.SimulateStage(&m_controlUnit);
 	}
 
 private:

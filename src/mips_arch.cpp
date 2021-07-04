@@ -1,5 +1,4 @@
 #include <iostream>
-#include "utils.h"
 #include "mips_arch.h"
 
 // =====================================================================================================================
@@ -63,16 +62,6 @@ int DetermineDestinationRegister(unsigned long int prissueInstruction, RegisterT
 }
 
 // =====================================================================================================================
-FetchStage::FetchStage()
-	:
-	m_t_trackDirtyRegisters{ false },
-	m_re1(0),
-	m_re2(0)
-{
-
-}
-
-// =====================================================================================================================
 ControlUnit::ControlUnit()
 	:
 	m_breakFlag(false),
@@ -80,14 +69,6 @@ ControlUnit::ControlUnit()
 	m_haltExec{0},
 	m_reg{ 0 },
 	m_tempBuffers{0}
-{
-
-}
-
-// =====================================================================================================================
-IssueStage::IssueStage()
-	:
-	m_prissue{0}
 {
 
 }
