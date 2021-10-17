@@ -20,7 +20,9 @@ void FetchStage::SimulateStage(
 	ControlUnit* pControlUnit)
 {
 	int i, requiredReg;
-	int targ_addr, opcode, type, arr;
+	int targ_addr, opcode, type;
+
+	bool t_prissueFull;
 
 	ProcessorBuffers* pTempBuffers = &(pControlUnit->m_tempBuffers);
 	RegisterTypes* pReg = &(pControlUnit->m_reg);
@@ -34,13 +36,24 @@ void FetchStage::SimulateStage(
 
 	//printf("\npHaltExec[0] = %u", pHaltExec[0]);
 	//printf("\npHaltExec[1] = %u", pHaltExec[1]);
-	for (int j = 0; j < 4; j++)
+	// The size of queues is guaranteed to be fixed
 	{
-		requiredReg = DetermineDestinationRegister(pTempBuffers->t_prissue[j], pReg);
-		if (requiredReg != -1)
+		size_t tempPrissueSize = pTempBuffers->pTempPrissueQ->size();
+		unsigned long int* pTempPrissueBuffer = new unsigned long int[tempPrissueSize];
+
+		bool status = pTempBuffers->pTempPrissueQ->readQ(pTempPrissueBuffer);
+		if (!status) { std::cout << "Buffer size mismatch detected. Cannot prcoeed."; return; }
+
+		for (int j = 0; j < tempPrissueSize; j++)
 		{
-			m_t_trackDirtyRegisters[requiredReg] = true;
+			requiredReg = DetermineDestinationRegister(pTempPrissueBuffer[j], pReg);
+			if (requiredReg != -1)
+			{
+				m_t_trackDirtyRegisters[requiredReg] = true;
+			}
 		}
+
+		delete[] pTempPrissueBuffer;
 	}
 
 	for (int j = 0; j < 2; j++)
@@ -79,12 +92,12 @@ void FetchStage::SimulateStage(
 			}
 		}
 
-		arr = CheckBuff4Empty(pTempBuffers->t_prissue);
-		if (arr != -1)
+		t_prissueFull = pTempBuffers->pTempPrissueQ->isFull();
+
+		if (!t_prissueFull)
 		{
 			m_instructionFetchStall = 0;
 		}
-
 	}
 
 	/*printf("\nm_t_trackDirtyRegisters = [");
@@ -122,8 +135,9 @@ void FetchStage::SimulateStage(
 				//Jump instruction
 				if (opcode == 0x00)
 				{
-					arr = CheckBuff4Empty(pTempBuffers->t_prissue);
-					if (arr != -1)
+					t_prissueFull = pTempBuffers->pTempPrissueQ->isFull();
+
+					if (!t_prissueFull)
 					{
 						targ_addr = (pInstructionMemory[i + counter] & 0b00000011111111111111111111111111) << 2;
 						pHaltExec[1] = pInstructionMemory[i + counter];
@@ -140,8 +154,9 @@ void FetchStage::SimulateStage(
 				//JR instruction
 				else if (opcode == 0x01)
 				{
-					arr = CheckBuff4Empty(pTempBuffers->t_prissue);
-					if (arr != -1)
+					t_prissueFull = pTempBuffers->pTempPrissueQ->isFull();
+
+					if (!t_prissueFull)
 					{
 						DetermineRegister(pInstructionMemory[i + counter], 0, pReg);
 						//printf("\npInstructionMemory[%d] = %u", i+counter, pInstructionMemory[i+counter]);
@@ -182,8 +197,9 @@ void FetchStage::SimulateStage(
 					DetermineRegister(pInstructionMemory[i + counter], 2, pReg);
 					targ_addr = ((pReg->imm_addr) * 4); //same as shifting a binary number left by 2
 					//printf("\nNext I will try to check pDirtyRegisters condition");
-					arr = CheckBuff4Empty(pTempBuffers->t_prissue);
-					if (arr != -1)
+					t_prissueFull = pTempBuffers->pTempPrissueQ->isFull();
+
+					if (!t_prissueFull)
 					{
 						if (((pDirtyRegisters[pReg->rs] == false) &&
 							(pDirtyRegisters[pReg->rt] == false)) &&
@@ -234,8 +250,9 @@ void FetchStage::SimulateStage(
 				{
 					DetermineRegister(pInstructionMemory[i + counter], 2, pReg);
 					targ_addr = (pReg->imm_addr) * 4; //same as shifting a binary number left by 2
-					arr = CheckBuff4Empty(pTempBuffers->t_prissue);
-					if (arr != -1)
+					t_prissueFull = pTempBuffers->pTempPrissueQ->isFull();
+
+					if (!t_prissueFull)
 					{
 						if (pDirtyRegisters[pReg->rs] == false && (m_t_trackDirtyRegisters[pReg->rs] == false))
 						{
@@ -276,8 +293,9 @@ void FetchStage::SimulateStage(
 				{
 					DetermineRegister(pInstructionMemory[i + counter], 2, pReg);
 					targ_addr = (pReg->imm_addr) * 4; //same as shifting a binary number left by 2
-					arr = CheckBuff4Empty(pTempBuffers->t_prissue);
-					if (arr != -1)
+					t_prissueFull = pTempBuffers->pTempPrissueQ->isFull();
+
+					if (!t_prissueFull)
 					{
 						if ((pDirtyRegisters[pReg->rs] == false) && (m_t_trackDirtyRegisters[pReg->rs] == false))
 						{
@@ -317,15 +335,16 @@ void FetchStage::SimulateStage(
 				//BREAK instruction
 				else if (opcode == 0x05)
 				{
-					arr = CheckBuff4Empty(pTempBuffers->t_prissue);
-					if (arr != -1)
+                    t_prissueFull = pTempBuffers->pTempPrissueQ->isFull();
+
+					if (!t_prissueFull)
 					{
 						pHaltExec[1] = pInstructionMemory[i + counter];
 						m_instructionFetchStall = 1;
 						pControlUnit->m_breakFlag = 1;
 						break;
 					}
-					else if (arr == -1)
+					else
 					{
 						m_instructionFetchStall = 1;
 					}
@@ -334,12 +353,13 @@ void FetchStage::SimulateStage(
 				//NOP instruction
 				else if (opcode == 0x0B)
 				{
-					arr = CheckBuff4Empty(pTempBuffers->t_prissue);
-					if (arr != -1)
+					t_prissueFull = pTempBuffers->pTempPrissueQ->isFull();
+
+					if (!t_prissueFull)
 					{
 						pHaltExec[1] = pInstructionMemory[i + counter];
 					}
-					else if (arr == -1)
+					else
 					{
 						m_instructionFetchStall = 1;
 					}
@@ -347,21 +367,17 @@ void FetchStage::SimulateStage(
 				}
 				//SW,LW,SLL,SRL,SRA instruction
 				else if ((opcode == 0x06) ||
-					(opcode == 0x07) ||
-					(opcode == 0x08) ||
-					(opcode == 0x09) ||
-					(opcode == 0x0A))
+						 (opcode == 0x07) ||
+					     (opcode == 0x08) ||
+				         (opcode == 0x09) ||
+				         (opcode == 0x0A))
 				{
-					arr = CheckBuff4Empty(pTempBuffers->t_prissue);
-					if (arr != -1)
-					{
-						pTempBuffers->t_prissue[arr] = pInstructionMemory[i + counter];
-					}
-					else if (arr == -1)
+					bool success = pTempBuffers->pTempPrissueQ->push(pInstructionMemory[i + counter]);
+
+					if (!success)
 					{
 						m_instructionFetchStall = 1;
 					}
-
 				}
 			}
 
@@ -371,17 +387,11 @@ void FetchStage::SimulateStage(
 				if ((opcode >= 0x00) &&
 					(opcode <= 0x0B))
 				{
-					arr = CheckBuff4Empty(pTempBuffers->t_prissue);
-					//printf("arr = %d",arr);
-					if (arr != -1)
+                    bool success = pTempBuffers->pTempPrissueQ->push(pInstructionMemory[i + counter]);
+
+					if (!success)
 					{
-						//printf("I am in add code: %u", pInstructionMemory[i+counter]);
-						//printf("\ni+counter = %d\n",i+counter);
-						pTempBuffers->t_prissue[arr] = pInstructionMemory[i + counter];
-					}
-					else if (arr == -1)
-					{
-						m_instructionFetchStall = 1;
+                        m_instructionFetchStall = 1;
 					}
 				}
 			}

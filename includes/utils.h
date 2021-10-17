@@ -2,40 +2,57 @@
 #include <fstream>
 #include <iostream>
 #include <queue>
-#include "mips_arch.h"
 
 #define DEBUG_LOG 1
 
-int CheckBuff4Empty(unsigned long int* buffer);
-
 int CheckBuff2Empty(unsigned long int* buffer);
 
-template <typename T, int MaxLen, typename Container = std::queue<T>>
-class Queue : public std::queue<T, Container>
+class Queue
 {
 public:
-	int push(const T& value)
+	Queue(int maxLen) { m_maxLen = maxLen; }
+
+	bool push(unsigned long int value)
 	{
-		if (this->size() == MaxLen)
-		{
-			return -1;
-		}
+		if (m_Q.size() == m_maxLen) return false;
 		else
 		{
-			std::queue<T, Container>::push(value);
-			return 0;
+			m_Q.push(value);
+			return true;
 		}
 	}
-};
 
-struct InputHandler
-{
-public:
-	InputHandler();
-	void LoadMipsCodeFromFile(MipsProcessor* processor, std::ifstream* pCodeFile);
+	void pop() { m_Q.pop(); }
 
-	// This might seem a misnomer: m_instructionCount is in fact the count of all the lines
-	// read from the input file, which consists of 32 bit instructions + data words
-	int m_instructionCount;
-	int m_breakPosition;
+	std::size_t size() { return m_Q.size(); }
+
+	bool readQ(unsigned long int* pBuffer)
+	{
+		size_t bufferSize = sizeof(*pBuffer) / sizeof(unsigned long int);
+
+		if (bufferSize == m_maxLen)
+		{
+			for (int i = 0; i < m_maxLen; ++i)
+			{
+				// read the next element and store it in the buffer, pop from Q
+				// and then push it back
+				pBuffer[i] = m_Q.front();
+				m_Q.pop();
+				m_Q.push(pBuffer[i]);
+			}
+
+			return true;
+		}
+
+		return false;
+	}
+
+	bool isFull()
+	{
+		if (m_Q.size() == m_maxLen) return true;
+		else return false;
+	}
+private:
+	std::queue<unsigned long int> m_Q;
+	int m_maxLen;
 };

@@ -32,7 +32,7 @@ int  DetermineDestinationRegister(unsigned long int prissueInstruction, Register
 
 struct ProcessorBuffers
 {
-	unsigned long int t_prissue[4]; // temp pre issue buffer
+	Queue* pTempPrissueQ;           // temp pre issue queue
 	unsigned long int t_pralu1[2];  // temp pre alu1 queue
 	unsigned long int t_pralu2[2];  // temp pre alu2 queue
 	unsigned long int t_premem;     //pre mem buffer
@@ -77,6 +77,8 @@ private:
 	bool m_instructionFetchStall;
 	// array of temp values - temp_rstatus
 	bool m_t_trackDirtyRegisters[32];
+
+	void ScanQueue();
 };
 
 class IssueStage
@@ -159,4 +161,16 @@ private:
 	WriteBackStage m_writeBack;
 
 	ControlUnit    m_controlUnit;
+};
+
+struct InputHandler
+{
+public:
+	InputHandler();
+	void LoadMipsCodeFromFile(MipsProcessor* processor, std::ifstream* pCodeFile);
+
+	// This might seem a misnomer: m_instructionCount is in fact the count of all the lines
+	// read from the input file, which consists of 32 bit instructions + data words
+	int m_instructionCount;
+	int m_breakPosition;
 };
