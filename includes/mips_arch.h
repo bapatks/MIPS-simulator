@@ -77,8 +77,6 @@ private:
 	bool m_instructionFetchStall;
 	// array of temp values - temp_rstatus
 	bool m_t_trackDirtyRegisters[32];
-
-	void ScanQueue();
 };
 
 class IssueStage
