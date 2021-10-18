@@ -37,24 +37,24 @@ void FetchStage::SimulateStage(
 	//printf("\npHaltExec[0] = %u", pHaltExec[0]);
 	//printf("\npHaltExec[1] = %u", pHaltExec[1]);
 	// The size of queues is guaranteed to be fixed
-	{
-		size_t tempPrissueSize = pTempBuffers->pTempPrissueQ->size();
-		unsigned long int* pTempPrissueBuffer = new unsigned long int[tempPrissueSize];
 
-		bool status = pTempBuffers->pTempPrissueQ->readQ(pTempPrissueBuffer);
-		if (!status) { std::cout << "Buffer size mismatch detected. Cannot prcoeed."; return; }
+    {
+        int tempPrissueSize = pTempBuffers->pTempPrissueQ->getMaxLen();
+        unsigned long int* pTempPrissueBuffer = new unsigned long int[tempPrissueSize]();
 
-		for (int j = 0; j < tempPrissueSize; j++)
-		{
-			requiredReg = DetermineDestinationRegister(pTempPrissueBuffer[j], pReg);
-			if (requiredReg != -1)
-			{
-				m_t_trackDirtyRegisters[requiredReg] = true;
-			}
-		}
+        pTempBuffers->pTempPrissueQ->readQ(pTempPrissueBuffer);
 
-		delete[] pTempPrissueBuffer;
-	}
+        for (int j = 0; j < tempPrissueSize; j++)
+        {
+            requiredReg = DetermineDestinationRegister(pTempPrissueBuffer[j], pReg);
+            if (requiredReg != -1)
+            {
+                m_t_trackDirtyRegisters[requiredReg] = true;
+            }
+        }
+
+        delete[] pTempPrissueBuffer;
+    }
 
 	for (int j = 0; j < 2; j++)
 	{

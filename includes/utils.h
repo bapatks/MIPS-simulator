@@ -26,25 +26,19 @@ public:
 
 	std::size_t size() { return m_Q.size(); }
 
-	bool readQ(unsigned long int* pBuffer)
+    // The size of the buffer pointed to by pBuffer MUST be equal to the Q size
+	void readQ(unsigned long int* pBuffer)
 	{
-		size_t bufferSize = sizeof(*pBuffer) / sizeof(unsigned long int);
+        size_t qSize = m_Q.size();
 
-		if (bufferSize == m_maxLen)
-		{
-			for (int i = 0; i < m_maxLen; ++i)
-			{
-				// read the next element and store it in the buffer, pop from Q
-				// and then push it back
-				pBuffer[i] = m_Q.front();
-				m_Q.pop();
-				m_Q.push(pBuffer[i]);
-			}
-
-			return true;
-		}
-
-		return false;
+        for (int i = 0; i < qSize; ++i)
+        {
+            // read the next element and store it in the buffer, pop from Q
+            // and then push it back
+            pBuffer[i] = m_Q.front();
+            m_Q.pop();
+            m_Q.push(pBuffer[i]);
+        }
 	}
 
 	bool isFull()
@@ -52,6 +46,8 @@ public:
 		if (m_Q.size() == m_maxLen) return true;
 		else return false;
 	}
+
+    int getMaxLen() { return m_maxLen; }
 private:
 	std::queue<unsigned long int> m_Q;
 	int m_maxLen;
