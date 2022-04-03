@@ -27,14 +27,14 @@ struct RegisterTypes
 	unsigned short int imm_addr; // stores 16 bit offset address
 };
 
-void DetermineRegister(unsigned long int instruction, int immFlag, RegisterTypes* pReg);
+void DetermineRegister(unsigned long int instruction, IntructionFormat immFlag, RegisterTypes* pReg);
 int  DetermineDestinationRegister(unsigned long int prissueInstruction, RegisterTypes* pReg);
 
 struct ProcessorBuffers
 {
-	Queue* pTempPrissueQ;           // temp pre issue queue
-	unsigned long int t_pralu1[2];  // temp pre alu1 queue
-	unsigned long int t_pralu2[2];  // temp pre alu2 queue
+	Queue* pPrissueQ;  // temp pre issue queue
+	Queue* pralu1Q;    // temp pre alu1 queue
+	Queue* pralu2Q;    // temp pre alu2 queue
 	unsigned long int t_premem;     //pre mem buffer
 	unsigned long int t_postalu2;   //post alu2 buffer
 	unsigned long int t_postmem;    //post mem buffer
@@ -48,10 +48,20 @@ class ControlUnit
 {
 public:
 	ControlUnit();
+    ~ControlUnit();
+
+    RegisterTypes* GetRegistertypesPtr() { return &m_reg; }
+
+    ProcessorBuffers* GetTempBuffersPtr() { return &m_tempBuffers; }
+
+    bool* GetDirtyRegistersPtr() { return m_trackDirtyRegisters; }
+
 	bool m_breakFlag; // used by fetch stage and simulator
-	bool m_trackDirtyRegisters[32]; // rstatus - Used by fetch, issue, mem stage
 
 	unsigned long int m_haltExec[2]; //used by fetch stage and simulator
+
+private:
+    bool m_trackDirtyRegisters[32]; // rstatus - Used by fetch, issue, mem stage
 
 	RegisterTypes m_reg;
 
@@ -87,17 +97,23 @@ public:
 		ControlUnit* pControlUnit);
 
 private:
-	unsigned long int m_prissue[4];   // pre issue buffer
+	Queue m_prissueQ;   // pre issue buffer
 };
 
 class AluStage
 {
 public:
-	AluStage();
+	AluStage(bool allowLoadStoreOnly);
+    void SimulateStage(ControlUnit* pControlUnit);
 
 private:
-	unsigned long int pralu[2]; // pre alu queue or FIFO buffer
-	unsigned long int postalu; // post alu buffer
+    Queue m_praluQ;
+	//unsigned long int postalu; // post alu buffer - needed?
+
+    const bool m_isLoadStoreOnlyAlu;
+
+    void SimulateLoadStoreOnlyStage(ControlUnit* pControlUnit);
+    void SimulateDataAluStage(ControlUnit* pControlUnit);
 
 };
 

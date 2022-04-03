@@ -3,18 +3,18 @@
 #include "mips_arch.h"
 
 // =====================================================================================================================
-void DetermineRegister(unsigned long int instruction, int immFlag, RegisterTypes* pReg)
+void DetermineRegister(unsigned long int instruction, IntructionFormat immFlag, RegisterTypes* pReg)
 {
-	if (immFlag == 0)
+	if (immFlag == InstrReg)
 	{
 		pReg->rd = (instruction & REG_RD_BITMASK) >> 11;
 	}
-	else if (immFlag == 1)
+	else if (immFlag == InstrImmData)
 	{
 		pReg->imm = (instruction & REG_IMM_BITMASK);
 		//printf("%d\n", pReg->imm);
 	}
-	else if (immFlag == 2)
+	else if (immFlag == InstrImmAddress)
 	{
 		pReg->imm_addr = (instruction & REG_IMM_BITMASK);
 	}
@@ -26,13 +26,12 @@ void DetermineRegister(unsigned long int instruction, int immFlag, RegisterTypes
 // =====================================================================================================================
 int DetermineDestinationRegister(unsigned long int prissueInstruction, RegisterTypes* pReg)
 {
-	long unsigned int check;
-	check = (prissueInstruction & CHECK_INSTR_BITMASK) >> 26;
+	unsigned int instr = (prissueInstruction & CHECK_INSTR_BITMASK) >> 26;
 
-	switch (check)
+	switch (instr)
 	{
 	case 0x17: //LW
-		DetermineRegister(prissueInstruction, 2, pReg);
+		DetermineRegister(prissueInstruction, InstrImmAddress, pReg);
 		return pReg->rt;
 		break;
 	case 0x18: //SLL
@@ -46,14 +45,14 @@ int DetermineDestinationRegister(unsigned long int prissueInstruction, RegisterT
 	case 0x35:
 	case 0x36:
 	case 0x37:
-		DetermineRegister(prissueInstruction, 0, pReg);
+		DetermineRegister(prissueInstruction, InstrReg, pReg);
 		return pReg->rd;
 		break;
 	case 0x38: //ADDI
 	case 0x39:
 	case 0x3A:
 	case 0x3B:
-		DetermineRegister(prissueInstruction, 1, pReg);
+		DetermineRegister(prissueInstruction, InstrImmData, pReg);
 		return pReg->rt;
 		break;
 	default:
@@ -116,15 +115,16 @@ ControlUnit::ControlUnit()
 	m_haltExec{0},
 	m_reg{ 0 }
 {
-	m_tempBuffers.pTempPrissueQ = new Queue(4);
+	m_tempBuffers.pPrissueQ = new Queue(4);
+    m_tempBuffers.pralu1Q   = new Queue(2);
+    m_tempBuffers.pralu2Q   = new Queue(2);
 }
 
-// =====================================================================================================================
-AluStage::AluStage()
-	:
-	pralu{0}
+ControlUnit::~ControlUnit()
 {
-
+    delete m_tempBuffers.pPrissueQ;
+    delete m_tempBuffers.pralu1Q;
+    delete m_tempBuffers.pralu2Q;
 }
 
 // =====================================================================================================================
@@ -140,7 +140,9 @@ MemoryStage::MemoryStage()
 MipsProcessor::MipsProcessor()
 	:
 	m_registerFile{0},
-	m_programCounter(PC_START_ADDRESS)
+	m_programCounter(PC_START_ADDRESS),
+    m_alu1(true),
+    m_alu2(false)
 {
 	for (int i = 0; i < 512; i++)
 	{

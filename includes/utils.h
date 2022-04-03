@@ -7,6 +7,13 @@
 
 int CheckBuff2Empty(unsigned long int* buffer);
 
+enum IntructionFormat
+{
+    InstrReg        = 0,
+    InstrImmData    = 1,
+    InstrImmAddress = 2
+};
+
 class Queue
 {
 public:
@@ -23,6 +30,8 @@ public:
 	}
 
 	void pop() { m_Q.pop(); }
+
+    unsigned long int front() { return m_Q.front(); }
 
 	std::size_t size() { return m_Q.size(); }
 

@@ -23,17 +23,18 @@ int Simulator::RunSimulation(
 	unsigned long int* pInstructionMemory = (unsigned long int*)processor->GetInstructionMemoryPtr();
 	int* pDataMemory = (int*)processor->GetDataMemoryPtr();
 
-	unsigned short int* PC = (unsigned short int*)processor->GetProgramCounterPtr();
+	unsigned short int* pPC = (unsigned short int*)processor->GetProgramCounterPtr();
 
 	int breakPosition    = m_pInputParser->m_breakPosition;
 	int instructionCount = m_pInputParser->m_instructionCount;
 
-	int dataStartAddress = (*PC) + (breakPosition * 4);
+	int dataStartAddress = (*pPC) + (breakPosition * 4);
 
-	while (((*PC) >= PC_START_ADDRESS) &&
-		   ((*PC) < dataStartAddress))
+	while (((*pPC) >= PC_START_ADDRESS) &&
+		   ((*pPC) < dataStartAddress))
 	{
 		processor->Fetch();
+        processor->Issue();
 	}
 	return 0;
 }

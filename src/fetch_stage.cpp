@@ -24,9 +24,10 @@ void FetchStage::SimulateStage(
 
 	bool t_prissueFull;
 
-	ProcessorBuffers* pTempBuffers = &(pControlUnit->m_tempBuffers);
-	RegisterTypes* pReg = &(pControlUnit->m_reg);
-	bool* pDirtyRegisters = pControlUnit->m_trackDirtyRegisters;
+	ProcessorBuffers* pTempBuffers = pControlUnit->GetTempBuffersPtr();
+	RegisterTypes*    pReg         = pControlUnit->GetRegistertypesPtr();
+
+    bool*             pDirtyRegisters = pControlUnit->GetDirtyRegistersPtr();
 	unsigned long int* pHaltExec = pControlUnit->m_haltExec;
 
 #if DEBUG_LOG
@@ -39,10 +40,10 @@ void FetchStage::SimulateStage(
 	// The size of queues is guaranteed to be fixed
 
     {
-        int tempPrissueSize = pTempBuffers->pTempPrissueQ->getMaxLen();
+        int tempPrissueSize = pTempBuffers->pPrissueQ->getMaxLen();
         unsigned long int* pTempPrissueBuffer = new unsigned long int[tempPrissueSize]();
 
-        pTempBuffers->pTempPrissueQ->readQ(pTempPrissueBuffer);
+        pTempBuffers->pPrissueQ->readQ(pTempPrissueBuffer);
 
         for (int j = 0; j < tempPrissueSize; j++)
         {
@@ -92,7 +93,7 @@ void FetchStage::SimulateStage(
 			}
 		}
 
-		t_prissueFull = pTempBuffers->pTempPrissueQ->isFull();
+		t_prissueFull = pTempBuffers->pPrissueQ->isFull();
 
 		if (!t_prissueFull)
 		{
@@ -135,7 +136,7 @@ void FetchStage::SimulateStage(
 				//Jump instruction
 				if (opcode == 0x00)
 				{
-					t_prissueFull = pTempBuffers->pTempPrissueQ->isFull();
+					t_prissueFull = pTempBuffers->pPrissueQ->isFull();
 
 					if (!t_prissueFull)
 					{
@@ -154,11 +155,11 @@ void FetchStage::SimulateStage(
 				//JR instruction
 				else if (opcode == 0x01)
 				{
-					t_prissueFull = pTempBuffers->pTempPrissueQ->isFull();
+					t_prissueFull = pTempBuffers->pPrissueQ->isFull();
 
 					if (!t_prissueFull)
 					{
-						DetermineRegister(pInstructionMemory[i + counter], 0, pReg);
+						DetermineRegister(pInstructionMemory[i + counter], InstrReg, pReg);
 						//printf("\npInstructionMemory[%d] = %u", i+counter, pInstructionMemory[i+counter]);
 						targ_addr = pRegisterFile[pReg->rs];
 						//printf("\nhere m_t_trackDirtyRegisters[%d] = %d", pReg->rs, m_t_trackDirtyRegisters[pReg->rs]);
@@ -194,10 +195,10 @@ void FetchStage::SimulateStage(
 				//BEQ instruction
 				else if (opcode == 0x02)
 				{
-					DetermineRegister(pInstructionMemory[i + counter], 2, pReg);
+					DetermineRegister(pInstructionMemory[i + counter], InstrImmAddress, pReg);
 					targ_addr = ((pReg->imm_addr) * 4); //same as shifting a binary number left by 2
 					//printf("\nNext I will try to check pDirtyRegisters condition");
-					t_prissueFull = pTempBuffers->pTempPrissueQ->isFull();
+					t_prissueFull = pTempBuffers->pPrissueQ->isFull();
 
 					if (!t_prissueFull)
 					{
@@ -248,13 +249,13 @@ void FetchStage::SimulateStage(
 				//BLTZ instruction
 				else if (opcode == 0x03)
 				{
-					DetermineRegister(pInstructionMemory[i + counter], 2, pReg);
+					DetermineRegister(pInstructionMemory[i + counter], InstrImmAddress, pReg);
 					targ_addr = (pReg->imm_addr) * 4; //same as shifting a binary number left by 2
-					t_prissueFull = pTempBuffers->pTempPrissueQ->isFull();
+					t_prissueFull = pTempBuffers->pPrissueQ->isFull();
 
 					if (!t_prissueFull)
 					{
-						if (pDirtyRegisters[pReg->rs] == false && (m_t_trackDirtyRegisters[pReg->rs] == false))
+						if ((pDirtyRegisters[pReg->rs] == false) && (m_t_trackDirtyRegisters[pReg->rs] == false))
 						{
 							if (pRegisterFile[pReg->rs] < 0)
 							{
@@ -291,9 +292,9 @@ void FetchStage::SimulateStage(
 				//BGTZ instruction
 				else if (opcode == 0x04)
 				{
-					DetermineRegister(pInstructionMemory[i + counter], 2, pReg);
+					DetermineRegister(pInstructionMemory[i + counter], InstrImmAddress, pReg);
 					targ_addr = (pReg->imm_addr) * 4; //same as shifting a binary number left by 2
-					t_prissueFull = pTempBuffers->pTempPrissueQ->isFull();
+					t_prissueFull = pTempBuffers->pPrissueQ->isFull();
 
 					if (!t_prissueFull)
 					{
@@ -335,7 +336,7 @@ void FetchStage::SimulateStage(
 				//BREAK instruction
 				else if (opcode == 0x05)
 				{
-                    t_prissueFull = pTempBuffers->pTempPrissueQ->isFull();
+                    t_prissueFull = pTempBuffers->pPrissueQ->isFull();
 
 					if (!t_prissueFull)
 					{
@@ -353,7 +354,7 @@ void FetchStage::SimulateStage(
 				//NOP instruction
 				else if (opcode == 0x0B)
 				{
-					t_prissueFull = pTempBuffers->pTempPrissueQ->isFull();
+					t_prissueFull = pTempBuffers->pPrissueQ->isFull();
 
 					if (!t_prissueFull)
 					{
@@ -372,7 +373,7 @@ void FetchStage::SimulateStage(
 				         (opcode == 0x09) ||
 				         (opcode == 0x0A))
 				{
-					bool success = pTempBuffers->pTempPrissueQ->push(pInstructionMemory[i + counter]);
+					bool success = pTempBuffers->pPrissueQ->push(pInstructionMemory[i + counter]);
 
 					if (!success)
 					{
@@ -387,7 +388,7 @@ void FetchStage::SimulateStage(
 				if ((opcode >= 0x00) &&
 					(opcode <= 0x0B))
 				{
-                    bool success = pTempBuffers->pTempPrissueQ->push(pInstructionMemory[i + counter]);
+                    bool success = pTempBuffers->pPrissueQ->push(pInstructionMemory[i + counter]);
 
 					if (!success)
 					{
